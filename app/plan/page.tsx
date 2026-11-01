@@ -29,8 +29,11 @@ const DAYS = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 
 
 // ─── Meal databases ──────────────────────────────────────────────────────────
 
+// Meal database type
+type MealDB = { breakfast: Meal[]; lunch: Meal[]; dinner: Meal[]; snack: Meal[] };
+
 // NORMAL: Món Việt quen thuộc nhẹ nhàng
-const MEALS_NORMAL = {
+const MEALS_NORMAL: MealDB = {
   breakfast: [
     { name: 'Phở gà (tô nhỏ) + thêm rau giá', calories: 370, protein: 24, carbs: 50, fat: 7, note: 'Xin bớt nước béo' },
     { name: 'Bánh mì trứng ốp la + rau sống', calories: 360, protein: 16, carbs: 38, fat: 14, note: 'Bớt bơ/pa tê' },
@@ -70,7 +73,7 @@ const MEALS_NORMAL = {
 };
 
 // STRICT: Siết calo — đạm cao, ít mỡ, ít carbs
-const MEALS_STRICT = {
+const MEALS_STRICT: MealDB = {
   breakfast: [
     { name: '3 trứng luộc + 1 chuối tiêu nhỏ', calories: 260, protein: 20, carbs: 18, fat: 14, note: '🔥 Siết — đạm cao, ít carbs' },
     { name: 'Ức gà luộc (100g) + 1 trứng + rau sống', calories: 230, protein: 28, carbs: 6, fat: 8, note: '🔥 Ít calo nhất' },
@@ -451,12 +454,12 @@ export default function PlanPage() {
                       <span style={{ fontSize: 16 }}>🍽</span> Thực đơn {dietMode === 'strict' ? '(Siết 🔥)' : ''}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {[
+                      {([
                         { label: 'Sáng', meal: breakfast, icon: '☀️', color: '#F59E0B', bg: '#FEF9C3' },
                         { label: 'Trưa', meal: lunch, icon: '🌤', color: '#10B981', bg: '#DCFCE7' },
                         { label: 'Tối', meal: dinner, icon: '🌙', color: '#6366F1', bg: '#EEF2FF' },
                         { label: 'Ăn vặt', meal: snack, icon: '🍎', color: '#EC4899', bg: '#FDF2F8' },
-                      ].map(({ label, meal, icon, color, bg }) => (
+                      ] as { label: string; meal: Meal; icon: string; color: string; bg: string }[]).map(({ label, meal, icon, color, bg }) => (
                         <div key={label} style={{ padding: '12px 14px', borderRadius: 10, background: bg }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div style={{ flex: 1 }}>

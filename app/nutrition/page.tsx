@@ -164,7 +164,7 @@ export default function NutritionPage() {
                   paddingAngle={3} dataKey="value">
                   {macroData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                 </Pie>
-                <Tooltip formatter={(v: number, name: string) => [`${v}g`, name]} />
+                <Tooltip formatter={(value, name) => [`${value ?? ''}g`, String(name ?? '')]} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>

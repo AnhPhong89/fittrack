@@ -53,7 +53,7 @@ export default function ExercisePage() {
     setShowForm(false);
   };
 
-  const fillPopular = (ex: typeof POPULAR_EXERCISES[0]) => {
+  const fillPopular = (ex: { name: string; type: string; calPerMin: number }) => {
     const duration = form.duration ? +form.duration : 30;
     setForm((prev) => ({
       ...prev,
@@ -66,7 +66,7 @@ export default function ExercisePage() {
 
   // Weekly chart: last 7 days
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
-    const d = new Date();
+    const d = new Date(Date.now());
     d.setDate(d.getDate() - (6 - i));
     const dateStr = d.toISOString().split('T')[0];
     const dayEntries = allEntries.filter((e) => e.date === dateStr);
@@ -192,7 +192,7 @@ export default function ExercisePage() {
             <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
             <Tooltip
               contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-              formatter={(v: number) => [`${v} kcal`, 'Calories đốt']}
+              formatter={(value) => [`${value ?? ''} kcal`, 'Calories đốt']}
             />
             <Bar dataKey="calories" fill="var(--destructive)" radius={[6, 6, 0, 0]} />
           </BarChart>

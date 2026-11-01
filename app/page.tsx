@@ -184,7 +184,7 @@ export default function DashboardPage() {
                 <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
                 <Tooltip
                   contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: number) => [`${v} kg`, 'Cân nặng']}
+                  formatter={(value) => [`${value ?? ''} kg`, 'Cân nặng']}
                 />
                 {profile?.targetWeight && (
                   <ReferenceLine y={profile.targetWeight} stroke="var(--destructive)" strokeDasharray="6 3" label={{ value: 'Mục tiêu', fill: 'var(--destructive)', fontSize: 11 }} />

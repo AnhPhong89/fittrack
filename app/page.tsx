@@ -20,7 +20,7 @@ import { TodayCheckin } from '@/components/dashboard/today-checkin';
 export default function DashboardPage() {
   const { profile } = useProfile();
   const { entries: weightEntries } = useWeight();
-  const { plan } = usePlan();
+  const { plan, updatePlan } = usePlan();
   const today = useMemo(() => getTodayISO(), []);
   const nutrition = useNutrition(today);
   const exercise = useExercise(today);
@@ -132,6 +132,7 @@ export default function DashboardPage() {
           deleteMeal={nutrition.deleteEntry}
           addExercise={exercise.addEntry}
           deleteExercise={exercise.deleteEntry}
+          onDietModeChange={(dietMode) => updatePlan({ dietMode })}
         />
       </div>
 

@@ -685,6 +685,57 @@ input[type="number"]::-webkit-inner-spin-button {
 .duration-chip:hover { color: var(--foreground); border-color: var(--muted-foreground); }
 .duration-chip.active { background: var(--secondary); border-color: var(--secondary); color: white; }
 
+/* Diet mode toggle */
+.diet-toggle {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  padding: 4px; margin-bottom: 20px; border-radius: 14px; background: var(--muted);
+}
+.diet-option {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+  min-height: 52px; padding: 8px 14px; border: none; border-radius: 10px;
+  background: transparent; color: var(--muted-foreground);
+  font-family: inherit; font-size: 14px; cursor: pointer; text-align: left;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+.diet-option:hover { color: var(--foreground); }
+.diet-option.active { background: var(--card); box-shadow: var(--shadow-sm); }
+.diet-option.normal.active { color: var(--primary); }
+.diet-option.strict.active { color: var(--destructive); }
+
+/* Meal check items: tick area + "Món khác" */
+.check-item.meal { cursor: default; padding: 6px 10px 6px 6px; flex-wrap: wrap; gap: 4px; }
+.check-item.meal .check-main { align-items: flex-start; padding: 6px 8px; flex: 1 1 100%; }
+.check-item.meal .check-box, .check-item.meal .check-icon { margin-top: 2px; }
+.check-title.wrap { white-space: normal; }
+.check-portion {
+  display: flex; align-items: flex-start; gap: 5px; margin-top: 4px;
+  font-size: 12px; line-height: 1.45; color: var(--muted-foreground);
+}
+.check-portion svg { flex-shrink: 0; margin-top: 2px; }
+.swap-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin: 0 0 4px 74px; min-height: 36px; padding: 0 10px; border-radius: 8px;
+  border: 1px dashed var(--border); background: transparent;
+  color: var(--muted-foreground); font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s ease;
+}
+.swap-btn:hover { color: var(--foreground); border-color: var(--muted-foreground); }
+
+/* Portion guide */
+.portion-guide {
+  margin-top: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 0 14px;
+}
+.portion-guide summary {
+  display: flex; align-items: center; gap: 6px; min-height: 44px;
+  font-size: 13px; font-weight: 600; cursor: pointer; color: var(--foreground);
+}
+.portion-guide ul { list-style: none; display: flex; flex-direction: column; gap: 10px; padding-bottom: 14px; }
+.portion-guide li {
+  display: grid; grid-template-columns: 120px 1fr; gap: 2px 12px; font-size: 13px;
+}
+.portion-guide li span { color: var(--muted-foreground); }
+.portion-guide li em { grid-column: 2; font-style: normal; font-size: 14px; color: var(--primary); }
+
 @media (max-width: 1100px) {
   .dash-top, .dash-bottom { grid-template-columns: 1fr; }
   .mini-stats { flex-direction: row; flex-wrap: wrap; }
@@ -698,6 +749,8 @@ input[type="number"]::-webkit-inner-spin-button {
   .balance-eq { flex-wrap: wrap; justify-content: center; }
   .eq-item { flex: 0 0 auto; min-width: 64px; }
   .mini-stat { min-width: 100%; }
+  .portion-guide li { grid-template-columns: 1fr; }
+  .portion-guide li em { grid-column: 1; }
   .check-item.quick .duration-group { order: 3; width: 100%; padding-left: 42px; padding-bottom: 4px; }
 }
 

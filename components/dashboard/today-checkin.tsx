@@ -1,14 +1,15 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   Check, Sun, Moon, Coffee, Soup, Utensils, Apple, Footprints, Bike, Waves,
-  Dumbbell, Zap, Flower2, Flame, Timer, Plus, type LucideIcon,
+  Dumbbell, Zap, Flower2, Flame, Timer, Plus, Shuffle, Hand, type LucideIcon,
 } from 'lucide-react';
 import { ExerciseEntry, MealEntry, PlanState } from '@/lib/types';
-import { WORKOUTS, getDayMeals, getWeekdayIndex, DAYS } from '@/lib/plan-data';
+import {
+  WORKOUTS, getSlotMeal, getWeekdayIndex, findMeal, DAYS, PORTION_GUIDE, type MealSlot,
+} from '@/lib/plan-data';
 import { caloriesFromMET } from '@/lib/calculations';
-
-type MealSlot = MealEntry['mealType'];
 
 const MEAL_SLOTS: { slot: MealSlot; label: string; Icon: LucideIcon }[] = [
   { slot: 'breakfast', label: 'Bữa sáng', Icon: Coffee },
@@ -45,12 +46,18 @@ interface Props {
   deleteMeal: (id: string) => void;
   addExercise: (e: ExerciseEntry) => void;
   deleteExercise: (id: string) => void;
+  onDietModeChange: (mode: PlanState['dietMode']) => void;
 }
 
-export function TodayCheckin({ date, weightKg, plan, meals, exercises, addMeal, deleteMeal, addExercise, deleteExercise }: Props) {
+export function TodayCheckin({
+  date, weightKg, plan, meals, exercises, addMeal, deleteMeal, addExercise, deleteExercise, onDietModeChange,
+}: Props) {
   const dayIdx = getWeekdayIndex(new Date(`${date}T00:00:00`));
-  const dayMeals = getDayMeals(plan.dietMode, plan.seed, dayIdx);
   const session = plan.schedule[dayIdx];
+  // "Món khác" swaps, per diet mode + slot; not persisted (the ticked dish is what gets saved)
+  const [swaps, setSwaps] = useState<Record<string, number>>({});
+  const swapKey = (slot: MealSlot) => `${plan.dietMode}-${slot}`;
+  const mealFor = (slot: MealSlot) => getSlotMeal(plan.dietMode, plan.seed, dayIdx, slot, swaps[swapKey(slot)] ?? 0);
 
   // Checked items are stored as regular entries with deterministic ids,
   // so they also show up on the Nutrition / Exercise pages.
@@ -58,13 +65,13 @@ export function TodayCheckin({ date, weightKg, plan, meals, exercises, addMeal, 
   const sessionId = (slot: 'morning' | 'evening') => `plan-${date}-${slot}`;
   const quickId = (key: string) => `quick-${date}-${key}`;
 
-  const mealIds = new Set(meals.map((m) => m.id));
+  const mealById = new Map(meals.map((m) => [m.id, m]));
   const exerciseById = new Map(exercises.map((e) => [e.id, e]));
 
   const toggleMeal = (slot: MealSlot) => {
     const id = mealId(slot);
-    if (mealIds.has(id)) return deleteMeal(id);
-    const m = dayMeals[slot];
+    if (mealById.has(id)) return deleteMeal(id);
+    const m = mealFor(slot);
     addMeal({ id, date, mealType: slot, name: m.name, calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat });
   };
 
@@ -104,27 +111,81 @@ export function TodayCheckin({ date, weightKg, plan, meals, exercises, addMeal, 
         <span className="badge badge-green">{DAYS[dayIdx]}</span>
       </div>
 
+      <div className="diet-toggle" role="radiogroup" aria-label="Chế độ ăn hôm nay">
+        {([
+          { mode: 'normal', label: 'Bình thường', hint: 'Món Việt quen thuộc' },
+          { mode: 'strict', label: 'Siết calo', hint: 'Đạm cao, ít tinh bột' },
+        ] as const).map((o) => (
+          <button
+            key={o.mode}
+            type="button"
+            role="radio"
+            aria-checked={plan.dietMode === o.mode}
+            className={`diet-option ${o.mode} ${plan.dietMode === o.mode ? 'active' : ''}`}
+            onClick={() => onDietModeChange(o.mode)}
+          >
+            <span style={{ fontWeight: 700 }}>{o.label}</span>
+            <span style={{ fontSize: 12, opacity: 0.8 }}>{o.hint}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="checkin-grid">
         {/* Meals */}
         <div>
           <h3 className="checkin-group-title"><Utensils size={15} aria-hidden /> Bữa ăn theo thực đơn <span>+ calo</span></h3>
           <div className="check-list">
             {MEAL_SLOTS.map(({ slot, label, Icon }) => {
-              const meal = dayMeals[slot];
+              // Once ticked, show what was actually logged, even if the mode or swap changed since.
+              const logged = mealById.get(mealId(slot));
+              const meal = logged
+                ? { name: logged.name, calories: logged.calories, portion: findMeal(logged.name)?.portion }
+                : mealFor(slot);
               return (
-                <CheckItem
-                  key={slot}
-                  checked={mealIds.has(mealId(slot))}
-                  onToggle={() => toggleMeal(slot)}
-                  Icon={Icon}
-                  overline={label}
-                  title={meal.name}
-                  value={`+${meal.calories}`}
-                  tone="amber"
-                />
+                <div key={slot} className={`check-item amber meal ${logged ? 'checked' : ''}`}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={!!logged}
+                    className="check-main"
+                    onClick={() => toggleMeal(slot)}
+                  >
+                    <span className="check-box" aria-hidden>{logged && <Check size={14} strokeWidth={3} />}</span>
+                    <Icon size={18} aria-hidden className="check-icon" />
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span className="check-overline">{label}</span>
+                      <span className="check-title wrap">{meal.name}</span>
+                      {meal.portion && <span className="check-portion"><Hand size={12} aria-hidden /> {meal.portion}</span>}
+                    </span>
+                    <span className="check-value num">+{meal.calories}</span>
+                  </button>
+                  {!logged && (
+                    <button
+                      type="button"
+                      className="swap-btn"
+                      onClick={() => setSwaps((p) => ({ ...p, [swapKey(slot)]: (p[swapKey(slot)] ?? 0) + 1 }))}
+                      aria-label={`Đổi món khác cho ${label.toLowerCase()}`}
+                    >
+                      <Shuffle size={14} aria-hidden /> Món khác
+                    </button>
+                  )}
+                </div>
               );
             })}
           </div>
+
+          <details className="portion-guide">
+            <summary><Hand size={14} aria-hidden /> Không có cân? Cách ước lượng khẩu phần</summary>
+            <ul>
+              {PORTION_GUIDE.map((g) => (
+                <li key={g.measure}>
+                  <strong>{g.measure}</strong>
+                  <span>{g.means}</span>
+                  <em className="num">{g.approx}</em>
+                </li>
+              ))}
+            </ul>
+          </details>
           {otherMeals.length > 0 && (
             <p className="checkin-extra">
               + {otherMeals.length} món ghi thêm ({otherMeals.reduce((s, m) => s + m.calories, 0)} kcal)

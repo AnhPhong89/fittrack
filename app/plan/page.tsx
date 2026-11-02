@@ -268,6 +268,7 @@ export default function PlanPage() {
                               </div>
                               <div style={{ fontSize: 13, fontWeight: 600, marginTop: 3, lineHeight: 1.4 }}>{meal.name}</div>
                               {meal.note && <div style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 2 }}>{meal.note}</div>}
+                              <div style={{ fontSize: 12, fontWeight: 600, color: '#334155', marginTop: 4 }}>✋ {meal.portion}</div>
                               <div style={{ fontSize: 11, color: 'var(--muted-foreground)', marginTop: 3 }}>
                                 🥩 Đạm {meal.protein}g · 🌾 Tinh bột {meal.carbs}g · 🫒 Béo {meal.fat}g
                               </div>

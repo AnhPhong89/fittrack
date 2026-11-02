@@ -4,32 +4,37 @@ import { useProfile } from '@/hooks/use-profile';
 import { useWeight } from '@/hooks/use-weight';
 import { useNutrition } from '@/hooks/use-nutrition';
 import { useExercise } from '@/hooks/use-exercise';
+import { usePlan } from '@/hooks/use-plan';
 import {
-  calculateBMI, getBMICategory, calculateBMR, calculateTDEE,
-  getDailyCalorieTarget, getTodayISO, formatDate,
+  calculateBMI, getBMICategory, calculateBMR, getBaseBurn, getTodayISO, formatDate,
 } from '@/lib/calculations';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
-import { Scale, Flame, Zap, TrendingDown, TrendingUp, ArrowRight, Plus, User, Target } from 'lucide-react';
+import { Scale, Zap, TrendingDown, ArrowRight, Plus, User, Target, Bot, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
+import { CalorieBalance } from '@/components/dashboard/calorie-balance';
+import { TodayCheckin } from '@/components/dashboard/today-checkin';
 
 export default function DashboardPage() {
   const { profile } = useProfile();
   const { entries: weightEntries } = useWeight();
+  const { plan } = usePlan();
   const today = useMemo(() => getTodayISO(), []);
-  const { totals: nutritionTotals } = useNutrition(today);
-  const { totalCaloriesBurned } = useExercise(today);
+  const nutrition = useNutrition(today);
+  const exercise = useExercise(today);
+
+  const currentWeight = weightEntries.length > 0
+    ? weightEntries[weightEntries.length - 1].weight
+    : profile?.currentWeight ?? 0;
 
   const stats = useMemo(() => {
     if (!profile) return null;
-    const bmi = calculateBMI(profile.currentWeight, profile.height);
-    const bmr = calculateBMR(profile.currentWeight, profile.height, profile.age, profile.gender);
-    const tdee = calculateTDEE(bmr, profile.activityLevel);
-    const target = getDailyCalorieTarget(tdee);
-    return { bmi, bmiCategory: getBMICategory(bmi), tdee, target };
-  }, [profile]);
+    const bmi = calculateBMI(currentWeight, profile.height);
+    const bmr = calculateBMR(currentWeight, profile.height, profile.age, profile.gender);
+    return { bmi, bmiCategory: getBMICategory(bmi), baseBurn: getBaseBurn(bmr) };
+  }, [profile, currentWeight]);
 
   const chartData = useMemo(() => {
     const last30 = weightEntries.slice(-30);
@@ -38,10 +43,6 @@ export default function DashboardPage() {
       weight: e.weight,
     }));
   }, [weightEntries]);
-
-  const currentWeight = weightEntries.length > 0
-    ? weightEntries[weightEntries.length - 1].weight
-    : profile?.currentWeight ?? 0;
 
   const totalLost = profile
     ? profile.currentWeight - currentWeight
@@ -60,181 +61,119 @@ export default function DashboardPage() {
     return count;
   }, [weightEntries, today]);
 
-  const calorieBalance = nutritionTotals.calories - totalCaloriesBurned;
-
-  if (!profile) {
+  if (!profile || !stats) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 20, textAlign: 'center' }}>
-        <div style={{ width: 80, height: 80, background: 'var(--primary-light)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <User size={36} color="var(--primary)" />
+      <div className="empty-hero">
+        <div className="empty-hero-icon">
+          <User size={36} color="var(--primary)" aria-hidden />
         </div>
         <div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Chào mừng đến FitTrack!</h2>
+          <h1 style={{ fontSize: 26, fontWeight: 800, marginBottom: 8 }}>Chào mừng đến FitTrack!</h1>
           <p style={{ color: 'var(--muted-foreground)', maxWidth: 400 }}>
             Bắt đầu bằng cách thiết lập hồ sơ cá nhân để chúng tôi tính toán mục tiêu phù hợp cho bạn.
           </p>
         </div>
-        <Link href="/profile" className="btn btn-primary" style={{ fontSize: 15, padding: '12px 28px' }}>
-          Tạo hồ sơ ngay <ArrowRight size={16} />
+        <Link href="/profile" className="btn btn-primary btn-lg">
+          Tạo hồ sơ ngay <ArrowRight size={16} aria-hidden />
         </Link>
       </div>
     );
   }
 
+  const toGo = Math.max(0, currentWeight - profile.targetWeight);
+  const goalPct = profile.currentWeight > profile.targetWeight
+    ? Math.min(100, Math.max(0, (totalLost / (profile.currentWeight - profile.targetWeight)) * 100))
+    : 100;
+
   return (
     <div className="animate-in">
       {/* Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-          <div>
-            <h1 className="page-title">Xin chào, {profile.name}! 👋</h1>
-            <p className="page-subtitle">Hôm nay là {formatDate(today)} — Hãy tiếp tục hành trình của bạn!</p>
-          </div>
-          <div style={{ display: 'flex', gap: 10 }}>
-            <Link href="/weight" className="btn btn-primary btn-sm"><Plus size={14} /> Nhập cân</Link>
-            <Link href="/nutrition" className="btn btn-secondary btn-sm"><Plus size={14} /> Ghi bữa ăn</Link>
-          </div>
+      <header className="dash-header">
+        <div>
+          <p className="eyebrow">{new Date(`${today}T00:00:00`).toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+          <h1 className="page-title">Xin chào, {profile.name}!</h1>
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link href="/weight" className="btn btn-primary btn-sm"><Plus size={14} aria-hidden /> Nhập cân</Link>
+          <Link href="/plan" className="btn btn-secondary btn-sm"><CalendarDays size={14} aria-hidden /> Kế hoạch</Link>
+        </div>
+      </header>
+
+      {/* Balance + quick stats */}
+      <div className="dash-top">
+        <CalorieBalance
+          consumed={nutrition.totals.calories}
+          baseBurn={stats.baseBurn}
+          exerciseBurn={exercise.totalCaloriesBurned}
+        />
+
+        <div className="mini-stats">
+          <MiniStat Icon={Scale} color="var(--primary)" bg="var(--primary-light)" label="Cân nặng" value={`${currentWeight}`} unit="kg"
+            sub={toGo > 0 ? `Còn ${toGo.toFixed(1)} kg tới ${profile.targetWeight} kg` : 'Đã đạt mục tiêu!'}>
+            <div className="progress-bar" style={{ marginTop: 10, height: 6 }}>
+              <div className="progress-fill" style={{ width: `${goalPct}%` }} />
+            </div>
+          </MiniStat>
+          <MiniStat Icon={Target} color="var(--secondary)" bg="var(--secondary-light)" label="BMI" value={stats.bmi.toFixed(1)} sub={stats.bmiCategory} />
+          <MiniStat Icon={Zap} color="var(--energy)" bg="var(--energy-light)" label="Streak nhập cân" value={`${streak}`} unit="ngày"
+            sub={totalLost > 0 ? `Đã giảm ${totalLost.toFixed(1)} kg` : 'Cân mỗi sáng để giữ streak'} />
         </div>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid-cols-4" style={{ marginBottom: 28 }}>
-        <div className="stat-card green">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="form-label">Cân nặng hiện tại</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--primary)' }}>{currentWeight}<span style={{ fontSize: 14 }}> kg</span></div>
-              <div style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>
-                Mục tiêu: {profile.targetWeight} kg
-              </div>
-            </div>
-            <div style={{ background: 'var(--primary-light)', padding: 10, borderRadius: 10 }}>
-              <Scale size={22} color="var(--primary)" />
-            </div>
-          </div>
-          {totalLost > 0 && (
-            <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <TrendingDown size={14} color="var(--primary)" />
-              <span style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600 }}>Đã giảm {totalLost.toFixed(1)} kg</span>
-            </div>
-          )}
-        </div>
-
-        <div className="stat-card blue">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="form-label">Chỉ số BMI</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--secondary)' }}>{stats?.bmi.toFixed(1)}</div>
-              <div style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>{stats?.bmiCategory}</div>
-            </div>
-            <div style={{ background: 'var(--secondary-light)', padding: 10, borderRadius: 10 }}>
-              <Target size={22} color="var(--secondary)" />
-            </div>
-          </div>
-        </div>
-
-        <div className="stat-card amber">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="form-label">Calories hôm nay</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--accent)' }}>{nutritionTotals.calories}<span style={{ fontSize: 14 }}> kcal</span></div>
-              <div style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>Mục tiêu: {stats?.target.toFixed(0)} kcal</div>
-            </div>
-            <div style={{ background: 'var(--accent-light)', padding: 10, borderRadius: 10 }}>
-              <Flame size={22} color="var(--accent)" />
-            </div>
-          </div>
-          {stats && (
-            <div style={{ marginTop: 10 }}>
-              <div className="progress-bar">
-                <div className={`progress-fill amber ${nutritionTotals.calories > stats.target ? 'over' : ''}`}
-                  style={{ width: `${Math.min(100, (nutritionTotals.calories / stats.target) * 100)}%` }} />
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="stat-card rose">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <div className="form-label">Streak</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--destructive)' }}>{streak}<span style={{ fontSize: 14 }}> ngày</span></div>
-              <div style={{ fontSize: 12, color: 'var(--muted-foreground)', marginTop: 4 }}>Liên tiếp nhập cân</div>
-            </div>
-            <div style={{ background: 'var(--destructive-light)', padding: 10, borderRadius: 10 }}>
-              <Zap size={22} color="var(--destructive)" />
-            </div>
-          </div>
-        </div>
+      {/* Daily check-in */}
+      <div style={{ marginBottom: 24 }}>
+        <TodayCheckin
+          date={today}
+          weightKg={currentWeight}
+          plan={plan}
+          meals={nutrition.entries}
+          exercises={exercise.entries}
+          addMeal={nutrition.addEntry}
+          deleteMeal={nutrition.deleteEntry}
+          addExercise={exercise.addEntry}
+          deleteExercise={exercise.deleteEntry}
+        />
       </div>
 
-      {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginBottom: 24 }}>
-        {/* Weight Chart */}
+      {/* Weight chart + macros */}
+      <div className="dash-bottom">
         <div className="card">
-          <div className="section-title">
-            <TrendingDown size={18} color="var(--primary)" />
+          <h2 className="section-title">
+            <TrendingDown size={18} color="var(--primary)" aria-hidden />
             Tiến trình cân nặng (30 ngày)
-          </div>
+          </h2>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
-                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
+                <YAxis domain={['auto', 'auto']} tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 10, fontSize: 12 }}
                   formatter={(value) => [`${value ?? ''} kg`, 'Cân nặng']}
                 />
-                {profile?.targetWeight && (
-                  <ReferenceLine y={profile.targetWeight} stroke="var(--destructive)" strokeDasharray="6 3" label={{ value: 'Mục tiêu', fill: 'var(--destructive)', fontSize: 11 }} />
-                )}
-                <Line type="monotone" dataKey="weight" stroke="var(--primary)" strokeWidth={2.5} dot={{ fill: 'var(--primary)', r: 4 }} activeDot={{ r: 6 }} />
+                <ReferenceLine y={profile.targetWeight} stroke="var(--destructive)" strokeDasharray="6 3" label={{ value: 'Mục tiêu', fill: 'var(--destructive)', fontSize: 11 }} />
+                <Line type="monotone" dataKey="weight" stroke="var(--primary)" strokeWidth={2.5} dot={{ fill: 'var(--primary)', r: 3 }} activeDot={{ r: 6 }} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div style={{ height: 240, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: 'var(--muted-foreground)' }}>
-              <Scale size={40} strokeWidth={1} />
+            <div className="chart-empty">
+              <Scale size={40} strokeWidth={1} aria-hidden />
               <p style={{ fontSize: 14 }}>Chưa có dữ liệu — hãy nhập cân nặng đầu tiên!</p>
-              <Link href="/weight" className="btn btn-primary btn-sm"><Plus size={14} /> Nhập cân</Link>
+              <Link href="/weight" className="btn btn-primary btn-sm"><Plus size={14} aria-hidden /> Nhập cân</Link>
             </div>
           )}
         </div>
 
-        {/* Today overview */}
         <div className="card">
-          <div className="section-title">
-            <Flame size={18} color="var(--accent)" />
-            Tổng kết hôm nay
+          <h2 className="section-title">Dinh dưỡng hôm nay</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <MacroRow label="Protein (đạm)" value={nutrition.totals.protein} goal={Math.round(currentWeight * 1.6)} color="var(--secondary)" />
+            <MacroRow label="Carbs (tinh bột)" value={nutrition.totals.carbs} goal={200} color="var(--accent)" />
+            <MacroRow label="Fat (chất béo)" value={nutrition.totals.fat} goal={60} color="var(--destructive)" />
           </div>
-          <CalorieRing
-            consumed={nutritionTotals.calories}
-            burned={totalCaloriesBurned}
-            target={stats?.target ?? 2000}
-          />
-          <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <MacroRow label="Protein" value={nutritionTotals.protein} unit="g" color="var(--secondary)" />
-            <MacroRow label="Carbs" value={nutritionTotals.carbs} unit="g" color="var(--accent)" />
-            <MacroRow label="Fat" value={nutritionTotals.fat} unit="g" color="var(--destructive)" />
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="card">
-        <div className="section-title"><Zap size={18} color="var(--accent)" /> Thao tác nhanh</div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <Link href="/weight" className="btn btn-secondary" style={{ flex: 1, minWidth: 140 }}>
-            <Scale size={16} /> Nhập cân nặng
-          </Link>
-          <Link href="/nutrition" className="btn btn-secondary" style={{ flex: 1, minWidth: 140 }}>
-            <Flame size={16} /> Ghi bữa ăn
-          </Link>
-          <Link href="/exercise" className="btn btn-secondary" style={{ flex: 1, minWidth: 140 }}>
-            <Zap size={16} /> Ghi bài tập
-          </Link>
-          <Link href="/ai-coach" className="btn btn-secondary" style={{ flex: 1, minWidth: 140 }}>
-            <TrendingUp size={16} /> Hỏi AI Coach
+          <Link href="/ai-coach" className="btn btn-secondary" style={{ width: '100%', marginTop: 20 }}>
+            <Bot size={16} aria-hidden /> Hỏi AI Coach
           </Link>
         </div>
       </div>
@@ -242,46 +181,42 @@ export default function DashboardPage() {
   );
 }
 
-function CalorieRing({ consumed, burned, target }: { consumed: number; burned: number; target: number }) {
-  const net = consumed - burned;
-  const pct = Math.min(100, (net / target) * 100);
-  const over = net > target;
-  const r = 54;
-  const circ = 2 * Math.PI * r;
-  const dash = (pct / 100) * circ;
-
+function MiniStat({ Icon, color, bg, label, value, unit, sub, children }: {
+  Icon: typeof Scale; color: string; bg: string; label: string; value: string;
+  unit?: string; sub: string; children?: React.ReactNode;
+}) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-      <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r={r} fill="none" stroke="var(--muted)" strokeWidth="12" />
-        <circle
-          cx="70" cy="70" r={r} fill="none"
-          stroke={over ? 'var(--destructive)' : 'var(--primary)'}
-          strokeWidth="12"
-          strokeDasharray={`${dash} ${circ}`}
-          strokeLinecap="round"
-          transform="rotate(-90 70 70)"
-          style={{ transition: 'stroke-dasharray 0.5s ease' }}
-        />
-        <text x="70" y="64" textAnchor="middle" fill="var(--foreground)" fontSize="20" fontWeight="800">{net}</text>
-        <text x="70" y="80" textAnchor="middle" fill="var(--muted-foreground)" fontSize="11">kcal net</text>
-        <text x="70" y="94" textAnchor="middle" fill={over ? 'var(--destructive)' : 'var(--primary)'} fontSize="10" fontWeight="600">
-          {over ? `+${net - target} vượt` : `còn ${target - net}`}
-        </text>
-      </svg>
-      <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--muted-foreground)' }}>
-        <span>🍽 {consumed} nạp</span>
-        <span>🔥 {burned} đốt</span>
+    <div className="card mini-stat">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+        <div className="mini-stat-icon" style={{ background: bg }}>
+          <Icon size={20} color={color} aria-hidden />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="eyebrow" style={{ marginBottom: 0 }}>{label}</div>
+          <div className="num" style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.1, color }}>
+            {value}{unit && <span style={{ fontSize: 15, marginLeft: 3 }}>{unit}</span>}
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>{sub}</div>
+        </div>
       </div>
+      {children}
     </div>
   );
 }
 
-function MacroRow({ label, value, unit, color }: { label: string; value: number; unit: string; color: string }) {
+function MacroRow({ label, value, goal, color }: { label: string; value: number; goal: number; color: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <span style={{ fontSize: 13, color: 'var(--muted-foreground)' }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 700, color }}>{value}{unit}</span>
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+        <span style={{ color: 'var(--muted-foreground)' }}>{label}</span>
+        <span className="num" style={{ fontWeight: 700, fontSize: 15 }}>
+          <span style={{ color }}>{value}</span>
+          <span style={{ color: 'var(--muted-foreground)', fontWeight: 500 }}> / {goal}g</span>
+        </span>
+      </div>
+      <div className="progress-bar" style={{ height: 6 }}>
+        <div style={{ height: '100%', borderRadius: 100, width: `${Math.min(100, (value / goal) * 100)}%`, background: color, transition: 'width .4s ease' }} />
+      </div>
     </div>
   );
 }

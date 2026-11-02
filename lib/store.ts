@@ -1,10 +1,11 @@
-import { UserProfile, WeightEntry, MealEntry, ExerciseEntry } from './types';
+import { UserProfile, WeightEntry, MealEntry, ExerciseEntry, PlanState } from './types';
 
 const KEYS = {
   profile: 'fittrack_profile',
   weights: 'fittrack_weights',
   meals: 'fittrack_meals',
   exercises: 'fittrack_exercises',
+  plan: 'fittrack_plan',
 };
 
 function getItem<T>(key: string): T | null {
@@ -88,4 +89,13 @@ export function addExerciseEntry(entry: ExerciseEntry): void {
 export function deleteExerciseEntry(id: string): void {
   const entries = getExerciseEntries().filter((e) => e.id !== id);
   setItem(KEYS.exercises, entries);
+}
+
+// ---- Weekly Plan ----
+export function getPlanState(): PlanState | null {
+  return getItem<PlanState>(KEYS.plan);
+}
+
+export function savePlanState(plan: PlanState): void {
+  setItem(KEYS.plan, plan);
 }

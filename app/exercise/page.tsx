@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useExercise } from '@/hooks/use-exercise';
 import { ExerciseEntry } from '@/lib/types';
-import { generateId, getTodayISO, formatDate } from '@/lib/calculations';
+import { generateId, getTodayISO, formatDate, toLocalISO } from '@/lib/calculations';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Dumbbell, Plus, Trash2, Flame, Clock, Heart, Zap } from 'lucide-react';
 
@@ -68,7 +68,7 @@ export default function ExercisePage() {
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date(Date.now());
     d.setDate(d.getDate() - (6 - i));
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = toLocalISO(d);
     const dayEntries = allEntries.filter((e) => e.date === dateStr);
     return {
       date: formatDate(dateStr).slice(0, 5),

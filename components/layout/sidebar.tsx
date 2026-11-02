@@ -10,6 +10,8 @@ import {
   User,
   Activity,
   CalendarDays,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 const navItems = [
@@ -68,7 +70,7 @@ export function Sidebar({ onToggleDark, isDark }: { onToggleDark: () => void; is
           className="btn btn-secondary"
           style={{ width: '100%', justifyContent: 'flex-start', gap: 10, padding: '10px 14px' }}
         >
-          <span style={{ fontSize: 16 }}>{isDark ? '☀️' : '🌙'}</span>
+          {isDark ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
           <span style={{ fontSize: 13 }}>{isDark ? 'Chế độ sáng' : 'Chế độ tối'}</span>
         </button>
       </div>

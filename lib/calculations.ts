@@ -78,8 +78,30 @@ export function formatDate(dateStr: string): string {
   });
 }
 
+// Local-date ISO (YYYY-MM-DD). toISOString() is UTC, which in Vietnam (UTC+7)
+// would still report yesterday until 7am.
+export function toLocalISO(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function getTodayISO(): string {
-  return new Date(Date.now()).toISOString().split('T')[0];
+  return toLocalISO(new Date());
+}
+
+export const KCAL_PER_KG = 7700;
+
+// Calories burned by daily living without workouts. Workouts are counted from
+// logged exercises, so the profile's activity multiplier would double count them.
+export function getBaseBurn(bmr: number): number {
+  return bmr * ACTIVITY_MULTIPLIERS.sedentary;
+}
+
+// kcal = MET × body weight (kg) × hours
+export function caloriesFromMET(met: number, weightKg: number, minutes: number): number {
+  return Math.round(met * weightKg * (minutes / 60));
 }
 
 export function generateId(): string {

@@ -46,3 +46,9 @@ export interface HealthStats {
   weeklyWeightLoss: number;
   daysToGoal: number;
 }
+
+export interface PlanState {
+  dietMode: 'normal' | 'strict';
+  schedule: { morning: string; evening: string }[]; // index 0 = Monday
+  seed: number;
+}
